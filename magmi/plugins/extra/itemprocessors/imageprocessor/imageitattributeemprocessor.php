@@ -45,7 +45,7 @@ class ImageAttributeItemProcessor extends Magmi_ItemProcessor
 
     public function getPluginInfo()
     {
-        return array("name"=>"Image attributes processor","author"=>"Dweeves","version"=>"1.0.30",
+        return array("name"=>"Image attributes processor","author"=>"Dweeves, Tommy Goode","version"=>"1.0.33",
             "url"=>$this->pluginDocUrl("Image_attributes_processor"));
     }
 
@@ -219,28 +219,12 @@ class ImageAttributeItemProcessor extends Magmi_ItemProcessor
 
     public function handleVarcharAttribute($pid, &$item, $storeid, $attrcode, $attrdesc, $ivalue)
     {
-        if (trim($ivalue) == "")
-        {
-            return trim($ivalue);
-        }
+
         // trimming
         $ivalue = trim($ivalue);
-        // If not already a remote image & force remote root, set it & set authentication
-        if (!is_remote_path($ivalue))
+        if($ivalue=="")
         {
-            if ($this->_remoteroot != "")
-            {
-                $ivalue = $this->_remoteroot . str_replace("//", "/", "/$ivalue");
-            }
-        }
-        if (is_remote_path($ivalue))
-        {
-            // Amazon images patch , remove SLXXXX part
-            if (strpos($ivalue, 'amazon.com/images/I') !== false)
-            {
-                $pattern = '/\bSL[0-9]+\./i';
-                $ivalue = preg_replace($pattern, '', $ivalue);
-            }
+            return $ivalue;
         }
 
         // if it's a gallery
@@ -480,6 +464,23 @@ class ImageAttributeItemProcessor extends Magmi_ItemProcessor
             return false;
         }
 
+        //handle remote root per image
+        if(!is_remote_path($imgfile)) {
+            if ($this->_remoteroot != "") {
+                $imgfile = $this->_remoteroot . str_replace("//", "/", "/$imgfile");
+            }
+        }
+        //handle amazon specific
+        if (is_remote_path($imgfile))
+        {
+           // Amazon images patch , remove SLXXXX part
+           if (preg_match('|amazon\..*?/images/I|',$imgfile))
+           {
+                $pattern = '/\bSL[0-9]+\./i';
+                $imgfile = preg_replace($pattern, '', $imgfile);
+           }
+        }
+
         $source = $this->findImageFile($imgfile);
         if ($source == false)
         {
@@ -541,24 +542,70 @@ class ImageAttributeItemProcessor extends Magmi_ItemProcessor
 
             if (!$fileIdentical)
             {
-                if (!$this->saveImage($imgfile, $targetpath))
-                {
-                    $errors = $this->_mdh->getLastError();
-                    $this->fillErrorAttributes($item);
-                    $this->log("error copying $l2d/$bimgfile : {$errors["type"]},{$errors["message"]}", "warning");
-                    unset($errors);
-                    $this->setErrorImg($impath);
-                    return false;
-                }
-                else
-                {
-                    @$this->_mdh->chmod("$l2d/$bimgfile", Magmi_Config::getInstance()->getFileMask());
-                }
-            }
-            else
-            {
-                $this->log("Files where identical: skipped copying " . $imgfile . " to " . $targetFile, "info");
-            }
+				if (!$this->saveImage($imgfile, $targetpath))
+				{
+					$errors = $this->_mdh->getLastError();
+					$this->fillErrorAttributes($item);
+					$this->log("error copying $l2d/$bimgfile : {$errors["type"]},{$errors["message"]}", "warning");
+					unset($errors);
+					$this->setErrorImg($impath);
+					return false;
+				}
+				else
+				{
+					@$this->_mdh->chmod("$l2d/$bimgfile", Magmi_Config::getInstance()->getFileMask());
+
+					if ($this->getParam("IMG:storeindb", "no") == "yes")
+					{
+						/* create target dirs if they don't exist */
+						$dir_table = $this->tablename('core_directory_storage');
+						// get "catalog/product" path ID
+						$sql = "SELECT directory_id from $dir_table where name='product' and path='catalog'";
+						$parent_id = $this->selectone($sql, null, 'directory_id');
+
+						// check if i1 dir exists
+						$i1_dir = "catalog/product/$i1";
+						$sql = "SELECT directory_id FROM $dir_table WHERE name=? and parent_id=?";
+						$i1_dir_id = $this->selectone($sql, array($i1,$parent_id), 'directory_id');
+						// insert if it doesn't exist
+						if ($i1_dir_id == null)
+						{
+							$sql = "INSERT INTO $dir_table (name, path, upload_time, parent_id)
+										VALUES (?, 'catalog/product', NOW(), ?);";
+							$i1_dir_id = $this->insert($sql, array($i1,$parent_id));
+						}
+
+						// check if i2 dir exists
+						$i2_dir = "$i1_dir/$i2";
+						$sql = "SELECT directory_id FROM $dir_table WHERE name=? and parent_id=?";
+						$i2_dir_id = $this->selectone($sql, array($i2,$i1_dir_id), 'directory_id');
+						// insert second level if it doesn't exist
+						if ($i2_dir_id == null)
+						{
+							$sql = "INSERT INTO $dir_table (name, path, upload_time, parent_id)
+										VALUES (?, ?, NOW(), ?);";
+							$i2_dir_id = $this->insert($sql, array($i2,$i1_dir,$i1_dir_id));
+						}
+
+						/* insert the image */
+						$media_table = $this->tablename('core_file_storage');
+						$sql = "SELECT file_id FROM $media_table WHERE filename=? and directory_id=?";
+						$existing_file_id = $this->selectone($sql, array($bimgfile,$i2_dir_id), 'file_id');
+						if ($existing_file_id == null || $this->getParam("IMG:writemode") == "override") {
+							$image_path = $this->magdir . '/' . $targetpath;
+							$image_content = file_get_contents($image_path);
+							$sql = "INSERT INTO $media_table (content, upload_time, filename, directory_id, directory)
+										VALUES (?, NOW(), ?, ?, ?)
+										ON DUPLICATE KEY UPDATE content=VALUES(content), upload_time=VALUES(upload_time);";
+							$file_id = $this->insert($sql, array($image_content,$bimgfile,$i2_dir_id,$i2_dir));
+						}
+					}
+				}
+			}
+			else
+			{
+				$this->log("Files where identical: skipped copying " . $imgfile . " to " . $targetFile, "info");
+			}
         }
         $this->_lastimage = $impath;
         /* return image file name relative to media dir (with leading / ) */
@@ -593,7 +640,7 @@ class ImageAttributeItemProcessor extends Magmi_ItemProcessor
             {
                 // force label update
                 $attrdesc = $this->getAttrInfo($attrcode);
-                $this->updateLabel($attrdesc, $pid, $this->getItemStoreIds($item, $attr_desc["is_global"]),
+                $this->updateLabel($attrdesc, $pid, $this->getItemStoreIds($item, $attrdesc["is_global"]),
                     $item[$attrcode . "_label"]);
                 unset($attrdesc);
             }

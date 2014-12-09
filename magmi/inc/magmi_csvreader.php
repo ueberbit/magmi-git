@@ -17,10 +17,15 @@ class Magmi_CSVReader extends Magmi_Mixin
     protected $_buffersize;
     protected $_curline;
     protected $_nhcols;
+    protected $_cenc;
     protected $_ignored = array();
 
-    public function initialize()
+    public function initialize($params=null)
     {
+    	if(isset($params))
+    	{
+    		$this->_params=$params;
+    	}
         $this->_filename = $this->getParam("CSV:filename");
         $this->_csep = $this->getParam("CSV:separator", ",");
         $this->_dcsep = $this->_csep;
@@ -33,6 +38,11 @@ class Magmi_CSVReader extends Magmi_Mixin
         $this->_cenc = $this->getParam("CSV:enclosure", '"');
         $this->_buffersize = $this->getParam("CSV:buffer", 0);
         $this->_ignored = explode(",", $this->getParam("CSV:ignore"));
+    }
+    
+    public function getParam($paramname,$default='')
+    {
+    	return (isset($this->_params[$paramname]) && $this->_params[$paramname] != "")?$this->_params[$paramname]:$default;
     }
 
     public function getLinesCount()
@@ -47,14 +57,13 @@ class Magmi_CSVReader extends Magmi_Mixin
         {
             $count = -1;
         }
-        $linenum = 0;
         if ($f != false)
         {
             $line = 1;
             while ($line < $this->getParam("CSV:headerline", 1))
             {
                 $line++;
-                $dummy = fgetcsv($f, $this->_buffersize, $this->_csep, $this->_cenc);
+                fgetcsv($f, $this->_buffersize, $this->_csep, $this->_cenc);
             }
             // get records count
             while (fgetcsv($f, $this->_buffersize, $this->_csep, $this->_cenc))

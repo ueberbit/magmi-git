@@ -84,7 +84,7 @@ class CategoryImporter extends Magmi_ItemProcessor
 
     public function getPluginInfo()
     {
-        return array("name"=>"On the fly category creator/importer","author"=>"Dweeves","version"=>"0.2.4",
+        return array("name"=>"On the fly category creator/importer","author"=>"Dweeves","version"=>"0.2.5",
             "url"=>$this->pluginDocUrl("On_the_fly_category_creator/importer"));
     }
 
@@ -173,7 +173,6 @@ class CategoryImporter extends Magmi_ItemProcessor
         foreach ($cdefs as $cdef)
         {
             
-            $attrs = array();
             $parts = explode("::", $cdef);
             $cp = count($parts);
             $cname = trim($parts[0]);
@@ -311,7 +310,7 @@ class CategoryImporter extends Magmi_ItemProcessor
     {
         $rootpaths = array();
         $sids = $this->getItemStoreIds($item, 2);
-        $trimroot = "";
+        //$trimroot = "";
         // remove admin from store ids (no category root on it)
         if ($sids[0] == 0)
         {
@@ -347,7 +346,7 @@ class CategoryImporter extends Magmi_ItemProcessor
                         $k = "%RP:$sid%";
                         // store root path definitions
                         $rootpaths[$k] = array("path"=>$srp["path"],"rootarr"=>$srp["rootarr"]);
-                        $trimroot = trim($rname);
+                        //$trimroot = trim($rname);
                         // replace root name with store root key
                         $item["categories"] = str_replace($matches[0][$i], $k, $item["categories"]);
                         break;
@@ -429,10 +428,19 @@ class CategoryImporter extends Magmi_ItemProcessor
             // assign to category roots
             if ($this->getParam("CAT:lastonly", 0) == 0)
             {
-                foreach (array_values($rootpaths) as $ra)
+                foreach ($rootpaths as $base=>$ra)
                 {
-                    $id = array_pop($ra["rootarr"]);
-                    $catids[] = $id;
+                    //find root lenght
+                    $bl=strlen($base);
+                    //for each part of category list to include upwards , match up to local root
+                    foreach($catlist as $catdef)
+                    {
+                        if(substr($catdef,0,$bl)==$base) {
+                            $rootpath=$ra['rootarr'];
+                            array_shift($rootpath);
+                            $catids= array_merge($catids,$rootpath);
+                        }
+                    }
                 }
             }
             $catids = array_unique($catids);

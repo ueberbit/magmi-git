@@ -284,7 +284,7 @@ abstract class Magmi_Engine extends DbHelper
     public function callPlugins($types, $callback, &$data = null, $params = null, $break = true)
     {
         $result = true;
-        
+      //  $tclass=get_class($this);
         // If plugin type list is not an array , process it as string
         if (!is_array($types))
         {
@@ -300,7 +300,7 @@ abstract class Magmi_Engine extends DbHelper
         }
         
         // Timing initialization (global processing step)
-        $this->_timecounter->initTime($callback, get_class($this));
+       // $this->_timecounter->initTime($callback, get_class($this));
         
         // Iterate on plugin types (families)
         foreach ($types as $ptype)
@@ -311,18 +311,19 @@ abstract class Magmi_Engine extends DbHelper
                 // For all instances in the family
                 foreach ($this->_activeplugins[$ptype] as $pinst)
                 {
+                    $pclass=get_class($pinst);
                     // If the plugin has a hook for the defined processing step
                     if (method_exists($pinst, $callback))
                     {
                         // Timing initialization for current plugin in processing step
-                        $this->_timecounter->initTime($callback, get_class($pinst));
+                        //$this->_timecounter->initTime($callback, get_class($pinst));
                         // Perform plugin call
                         // either with or without parameters,or parameters & data
                         // store execution result
                         $callres = ($data == null ? ($params == null ? $pinst->$callback() : $pinst->$callback($params)) : $pinst->$callback(
                             $data, $params));
                         // End Timing for current plugin in current step
-                        $this->_timecounter->exitTime($callback, get_class($pinst));
+                        //$this->_timecounter->exitTime($callback, get_class($pinst));
                         // if plugin call result is false with data set
                         if ($callres === false && $data != null)
                         {
@@ -334,24 +335,21 @@ abstract class Magmi_Engine extends DbHelper
                         {
                             $cb = $this->_ploop_callbacks[$callback];
                             // Call the plugin processing loop callback , time it
-                            $this->_timecounter->initTime($callback, get_class($pinst));
+                            //$this->_timecounter->initTime($callback, $pclass);
                             $this->$cb($pinst, $data, $result);
-                            $this->_timecounter->exitTime($callback, get_class($pinst));
+                           // $this->_timecounter->exitTime($callback, $pclass);
                         }
                         // if last result plugin is false & break flag
                         if ($result === false && $break)
                         {
-                            // End timing
-                            $this->_timecounter->exitTime($callback, get_class($this));
-                            // return false
-                            return $result;
+                            break;
                         }
                     }
                 }
             }
         }
         // Nothing broke, end timing
-        $this->_timecounter->exitTime($callback, get_class($this));
+        //$this->_timecounter->exitTime($callback, $tclass);
         // Return plugin call result
         return $result;
     }
@@ -515,17 +513,29 @@ abstract class Magmi_Engine extends DbHelper
      */
     public function connectToMagento()
     {
-        // et database infos from properties
+    	// et database infos from properties
         if (!$this->_connected)
         {
-            $host = $this->getProp("DATABASE", "host", "localhost");
-            $dbname = $this->getProp("DATABASE", "dbname", "magento");
-            $user = $this->getProp("DATABASE", "user");
-            $pass = $this->getProp("DATABASE", "password");
-            $debug = $this->getProp("DATABASE", "debug");
+        	
             $conn = $this->getProp("DATABASE", "connectivity", "net");
-            $port = $this->getProp("DATABASE", "port", "3306");
+            $debug = $this->getProp("DATABASE", "debug",false);
             $socket = $this->getProp("DATABASE", "unix_socket");
+            if ($conn == 'localxml') {
+            	$baseDir = $this->getProp('MAGENTO', 'basedir');
+            	$xml = new SimpleXMLElement(file_get_contents($baseDir.'app/etc/local.xml'));
+            	$default_setup = $xml->global->resources->{$this->getProp('DATABASE', 'resource', 'default_setup')}->connection;
+            	$host = $default_setup->host;
+            	$dbname = $default_setup->dbname;
+            	$user = $default_setup->username;
+            	$pass = $default_setup->password;
+            	$port = $default_setup->port;
+            } else {
+            	$host = $this->getProp("DATABASE", "host", "localhost");
+            	$dbname = $this->getProp("DATABASE", "dbname", "magento");
+            	$user = $this->getProp("DATABASE", "user");
+            	$pass = $this->getProp("DATABASE", "password");
+            	$port = $this->getProp("DATABASE", "port", "3306");
+            }
             $this->initDb($host, $dbname, $user, $pass, $port, $socket, $conn, $debug);
             // suggested by pastanislas
             $this->_db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
@@ -550,7 +560,7 @@ abstract class Magmi_Engine extends DbHelper
      */
     public function tablename($magname)
     {
-        return $this->tprefix != "" ? $this->tprefix . "$magname" : $magname;
+        return $this->tprefix . $magname;
     }
 
     public abstract function engineInit($params);

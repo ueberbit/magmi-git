@@ -47,13 +47,13 @@ class DBHelper
     {
         // intialize connection with PDO
         // fix by Mr Lei for UTF8 special chars
-        if ($conntype == "net")
+        if ($conntype == "socket")
         {
-            $pdostr = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8";
+            $pdostr = "mysql:unix_socket=$socket;dbname=$dbname;charset=utf8";
         }
         else
         {
-            $pdostr = "mysql:unix_socket=$socket;dbname=$dbname;charset=utf8";
+        	$pdostr = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8";
         }
         
         $this->_db = new PDO($pdostr, $user, $pass, array(PDO::MYSQL_ATTR_INIT_COMMAND=>"SET NAMES utf8"));
@@ -263,7 +263,7 @@ class DBHelper
         $this->_timecounter->exitTime("indb", null, $this->_tcats);
         $t1 = microtime(true);
         $this->_indbtime += $t1 - $t0;
-        $this->logdebug("$sql\n" . print_r($params, true));
+        //$this->logdebug("$sql\n" . print_r($params, true));
         unset($params);
         return $stmt;
     }
@@ -508,7 +508,7 @@ class DBHelper
     {
         $this->_db->beginTransaction();
         $this->_intrans = true;
-        $this->logdebug("-- TRANSACTION BEGIN --");
+        //$this->logdebug("-- TRANSACTION BEGIN --");
     }
 
     /**
@@ -518,7 +518,7 @@ class DBHelper
     {
         $this->_db->commit();
         $this->_intrans = false;
-        $this->logdebug("-- TRANSACTION COMMIT --");
+        //$this->logdebug("-- TRANSACTION COMMIT --");
     }
 
     /**
@@ -530,7 +530,7 @@ class DBHelper
         {
             $this->_db->rollBack();
             $this->_intrans = false;
-            $this->logdebug("-- TRANSACTION ROLLBACK --");
+           // $this->logdebug("-- TRANSACTION ROLLBACK --");
         }
     }
 

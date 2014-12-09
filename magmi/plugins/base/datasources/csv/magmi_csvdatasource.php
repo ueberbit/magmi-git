@@ -9,8 +9,8 @@ class Magmi_CSVDataSource extends Magmi_Datasource
     public function initialize($params)
     {
         $this->_csvreader = new Magmi_CSVReader();
-        $this->_csvreader->bind($this);
-        $this->_csvreader->initialize();
+        //csv reader is now independent from plugin
+        $this->_csvreader->initialize($params);
     }
 
     public function getAbsPath($path)
@@ -116,7 +116,7 @@ class Magmi_CSVDataSource extends Magmi_Datasource
             $url = $this->getParam("CSV:remoteurl", "");
             $outname = $this->getRemoteFile($url);
             $this->setParam("CSV:filename", $outname);
-            $this->_csvreader->initialize();
+            $this->_csvreader->initialize($this->_params);
         }
         return $this->_csvreader->checkCSV();
     }
