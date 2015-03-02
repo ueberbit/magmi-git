@@ -1016,8 +1016,13 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                 $scope=$scope>0?$scope-$attrdesc["is_configurable"]:0;
                 $store_ids = $this->getItemStoreIds($item, $scope);
 
+                //allow reset of $tp == "int" field values in create mode if value was set to __MAGMI_NULL__
+                if ($ivalue === '__MAGMI_NULL__') {
+                    $ivalue = null;
+                }
+
                 // do not handle empty generic int values in create mode
-                if ($ivalue == "" && $this->mode != "update" && $tp == "int")
+                if (!is_null($ivalue) && $ivalue == "" && $this->mode != "update" && $tp == "int")
                 {
                     continue;
                 }
@@ -1031,7 +1036,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                     // base output value to be inserted = base source value
                     $ovalue = $ivalue;
                     //iterate on available handlers until one gives a proper value
-                    for($i=0;$i<count($handlers);$i++)
+                    if($ovalue !== null) for($i=0;$i<count($handlers);$i++)
                     {
                         //get handler info array for current handler (handler instance & callback name)
                         list($hdl,$cb)=$handlers[$i];
@@ -1053,7 +1058,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
 
                     else
                     // if handled value is a "DELETE" or a NULL , which will also be removed
-                    if ($ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
+                    if ($ivalue === null || $ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
                     {
                         $deletes[] = $attid;
                         // do not handle value in insert
@@ -1061,9 +1066,8 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                     }
 
                     // if we have something to do with this value
-                    if ($ovalue !== false && $ovalue != null)
+                    if ($ovalue !== false && $ovalue !== null)
                     {
-
                         $data[] = $this->prod_etype;
                         $data[] = $attid;
                         $data[] = $store_id;
