@@ -1017,7 +1017,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                 $store_ids = $this->getItemStoreIds($item, $scope);
 
                 //allow reset of $tp == "int" field values in create mode if value was set to __MAGMI_NULL__
-                if ($ivalue === '__MAGMI_NULL__') {
+                if ($ivalue == '__MAGMI_NULL__') {
                     $ivalue = null;
                 }
 
@@ -1055,10 +1055,8 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                     {
                         $ovalue = false;
                     }
-
-                    else
                     // if handled value is a "DELETE" or a NULL , which will also be removed
-                    if ($ivalue === null || $ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
+                    elseif ($ovalue === null || $ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
                     {
                         $deletes[] = $attid;
                         // do not handle value in insert
