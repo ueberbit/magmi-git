@@ -1,7 +1,12 @@
 <?php
+require_once(dirname(dirname(__DIR__))."/inc/magmi_defs.php");
 require_once ("magmi_config.php");
 require_once ("magmi_mixin.php");
 
+
+/**
+ * Class Magmi_PluginConfig , Plugin configuration class
+ */
 class Magmi_PluginConfig extends ProfileBasedConfig
 {
     protected $_prefix;
@@ -58,6 +63,11 @@ class Magmi_PluginOptionsPanel
     public function __construct($pinst, $file = null)
     {
         $this->_plugin = $pinst;
+       //fix xsrf, limit inclusion to "basename"
+       if($file !==null && (basename($file)!==$file))
+        {
+            $file=null;
+        }
         $this->_file = ($file == null ? "options_panel.php" : $file);
         $this->initDefaultHtml();
     }
@@ -110,9 +120,16 @@ abstract class Magmi_Plugin extends Magmi_Mixin
     protected $_config;
     protected $_magmiconfig;
     protected $_pluginmeta;
+    protected $_params;
 
     public function __construct()
     {}
+
+
+    public function getParams()
+    {
+        return $this->_params;
+    }
 
     public function pluginDocUrl($urlk)
     {

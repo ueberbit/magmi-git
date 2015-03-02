@@ -93,7 +93,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
      */
     public function getEngineInfo()
     {
-        return array("name"=>"Magmi Product Import Engine","version"=>"1.9","author"=>"dweeves");
+        return array("name"=>"Magmi Product Import Engine","version"=>"1.9.1","author"=>"dweeves");
     }
 
     /**
@@ -374,7 +374,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
             $qcolstr = $this->arr2values($toscan);
 
             $tname = $this->tablename("eav_attribute");
-            if ($this->getMagentoVersion() != "1.3.x")
+            if ($this->checkMagentoVersion("1.3.x", "!="))
             {
                 $extra = $this->tablename("catalog_eav_attribute");
                 // SQL for selecting attribute properties for all wanted attributes
@@ -594,8 +594,13 @@ class Magmi_ProductImportEngine extends Magmi_Engine
     public function createOptionValue($optid, $store_id, $optval)
     {
         $t = $this->tablename('eav_attribute_option_value');
-        $optval_id = $this->insert("INSERT INTO $t (option_id,store_id,value) VALUES (?,?,?)",
-            array($optid,$store_id,$optval));
+        $optval_id = $this->selectone("SELECT value_id FROM $t WHERE option_id=? AND store_id=?", array($optid,$store_id), "value_id");
+        if (!$optval_id)
+        {
+            $optval_id = $this->insert("INSERT INTO $t (option_id,store_id,value) VALUES (?,?,?)",
+                array($optid,$store_id,$optval));
+        }
+
         return $optval_id;
     }
 
@@ -672,11 +677,13 @@ class Magmi_ProductImportEngine extends Magmi_Engine
             //if not existing in cache,create it
             if(!isset($optAdmin[$avalues[$i]]))
             {
+                //if no position set, default to 0
+                $xpos=$pos==-1?0:$pos;
                 //create new option entry
-                $newoptid = $this->createOption($attid,$pos);
+                $newoptid = $this->createOption($attid,$xpos);
                 $this->createOptionValue($newoptid, 0,$avalues[$i]);
                 //cache new created one
-                $this->cacheOpt($attid, 0, $newoptid, $avalues[$i],$pos==-1?0:$pos);
+                $this->cacheOpt($attid, 0, $newoptid, $avalues[$i],$xpos);
             }
             //else check for position change
             else{
@@ -701,7 +708,9 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                 {
                     //get option id from admin
                   $opt=$this->getCachedOpt($attid,0,$avalues[$i]);
-                  $this->createOptionValue($opt[0],$storeid,$svalues[$i]);
+                  if ($avalues[$i] !== $svalues[$i]) {
+                      $this->createOptionValue($opt[0],$storeid,$svalues[$i]);
+                  }
                   $this->cacheOpt($attid,$storeid,$opt[0],$svalues[$i],$opt[1]);
 
                 }
@@ -1007,13 +1016,8 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                 $scope=$scope>0?$scope-$attrdesc["is_configurable"]:0;
                 $store_ids = $this->getItemStoreIds($item, $scope);
 
-                //allow reset of $tp == "int" field values in create mode if value was set to __MAGMI_NULL__
-                if ($ivalue === '__MAGMI_NULL__') {
-                    $ivalue = null;
-                }
-
                 // do not handle empty generic int values in create mode
-                if (!is_null($ivalue) && $ivalue == "" && $this->mode != "update" && $tp == "int")
+                if ($ivalue == "" && $this->mode != "update" && $tp == "int")
                 {
                     continue;
                 }
@@ -1027,7 +1031,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                     // base output value to be inserted = base source value
                     $ovalue = $ivalue;
                     //iterate on available handlers until one gives a proper value
-                    if($ovalue !== null) for($i=0;$i<count($handlers);$i++)
+                    for($i=0;$i<count($handlers);$i++)
                     {
                         //get handler info array for current handler (handler instance & callback name)
                         list($hdl,$cb)=$handlers[$i];
@@ -1049,7 +1053,7 @@ class Magmi_ProductImportEngine extends Magmi_Engine
 
                     else
                     // if handled value is a "DELETE" or a NULL , which will also be removed
-                    if ($ivalue === null || $ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
+                    if ($ovalue == '__MAGMI_DELETE__' || $ovalue=='__NULL__')
                     {
                         $deletes[] = $attid;
                         // do not handle value in insert
@@ -1057,8 +1061,9 @@ class Magmi_ProductImportEngine extends Magmi_Engine
                     }
 
                     // if we have something to do with this value
-                    if ($ovalue !== false && $ovalue !== null)
+                    if ($ovalue !== false && $ovalue != null)
                     {
+
                         $data[] = $this->prod_etype;
                         $data[] = $attid;
                         $data[] = $store_id;

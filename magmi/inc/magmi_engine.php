@@ -83,6 +83,14 @@ abstract class Magmi_Engine extends DbHelper
     {
         return $this->_conf->get("MAGENTO", "version");
     }
+    
+    /**
+     * checks the magento version
+     */
+    public function checkMagentoVersion($version, $operator)
+    {
+        return version_compare($this->getMagentoVersion(), $version, $operator);
+    }
 
     /**
      * Plugin loop callback registration
@@ -522,7 +530,12 @@ abstract class Magmi_Engine extends DbHelper
             $socket = $this->getProp("DATABASE", "unix_socket");
             if ($conn == 'localxml') {
             	$baseDir = $this->getProp('MAGENTO', 'basedir');
-            	$xml = new SimpleXMLElement(file_get_contents($baseDir.'app/etc/local.xml'));
+            	$xmlPath = $baseDir.'/app/etc/local.xml';
+                if (!file_exists($xmlPath))
+                {
+                    throw new Exception("Cannot load xml from path '$xmlPath'");
+                }
+            	$xml = new SimpleXMLElement(file_get_contents($xmlPath));
             	$default_setup = $xml->global->resources->{$this->getProp('DATABASE', 'resource', 'default_setup')}->connection;
             	$host = $default_setup->host;
             	$dbname = $default_setup->dbname;
