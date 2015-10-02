@@ -86,7 +86,7 @@ class Properties
     {
         if ($fname == null)
         {
-            $fname == $this->inifile;
+            $fname = $this->inifile;
         }
         return $this->write_ini_file($this->_props, $fname, true);
     }
@@ -120,7 +120,7 @@ class Properties
                                 $content .= $key2 . "[] = \"" . $this->esc($elem2[$i]) . "\"\n";
                             }
                         }
-                        else 
+                        else
                             if ($elem2 == "")
                                 $content .= $key2 . " = \n";
                             else
@@ -137,18 +137,18 @@ class Properties
                         $celem = count($elem);
                         for ($i = 0; $i < $celem; $i++)
                         {
-                            $content .= $key2 . "[] = \"" . $this->esc($elem[$i]) . "\"\n";
+                            $content .= $key . "[] = \"" . $this->esc($elem[$i]) . "\"\n";
                         }
                     }
-                    else 
+                    else
                         if ($elem == "")
-                            $content .= $key2 . " = \n";
+                            $content .= $key . " = \n";
                         else
-                            $content .= $key2 . " = \"" . $this->esc($elem) . "\"\n";
+                            $content .= $key . " = \"" . $this->esc($elem) . "\"\n";
                 }
             }
         }
-        
+
         if (!$handle = fopen($path, 'w'))
         {
             return false;

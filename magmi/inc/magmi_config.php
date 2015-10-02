@@ -4,9 +4,9 @@ require_once ("properties.php");
 /**
  * Directory based configuration object
  * Uses a property file
- * 
+ *
  * @author dweeves
- *        
+ *
  */
 class DirbasedConfig extends Properties
 {
@@ -17,6 +17,7 @@ class DirbasedConfig extends Properties
     {
         $this->_basedir = $basedir;
         $this->_confname = $basedir . DIRSEP . $confname;
+        $this->inifile=$this->_confname;
     }
 
     public function get($secname, $pname, $default = null)
@@ -30,14 +31,14 @@ class DirbasedConfig extends Properties
 
     public function getConfFile()
     {
-        return $this->_confname;
+        return $this->inifile;
     }
 
     public function getLastSaved($fmt)
     {
-        if(file_exists($this->_confname))
+        if(file_exists($this->inifile))
         {
-            $lastsaved=strftime($fmt, filemtime($this->_confname));
+            $lastsaved=strftime($fmt, filemtime($this->inifile));
         }
         else
         {
@@ -52,9 +53,9 @@ class DirbasedConfig extends Properties
        {
         if ($name == null)
         {
-            $name = $this->_confname;
+            $name = $this->inifile;
         }
-        
+
         if (!file_exists($name))
         {
             $this->save();
@@ -69,7 +70,7 @@ class DirbasedConfig extends Properties
         {
             $this->setPropsFromFlatArray($arr);
         }
-        return parent::save($this->_confname);
+        return parent::save($this->inifile);
     }
 
     public function saveTo($arr, $newdir)
@@ -121,8 +122,8 @@ class ProfileBasedConfig extends DirbasedConfig
 class Magmi_Config extends DirbasedConfig
 {
     private static $_instance = null;
-    private $_defaultconfigname = null;
     public static $conffile = null;
+    protected $_default = TRUE;
 
     public function getConfDir()
     {
@@ -135,6 +136,12 @@ class Magmi_Config extends DirbasedConfig
         {
             return $this->_basedir;
         }
+    }
+
+    public function saveToFile($path)
+    {
+        $this->inifile=$path;
+        parent::save();
     }
 
     public function __construct()
@@ -155,8 +162,14 @@ class Magmi_Config extends DirbasedConfig
     public function getMagentoDir()
     {
         $bd = $this->get("MAGENTO", "basedir");
-        $dp = $bd[0] == "." ? dirname(__FILE__) . "/" . $bd : $bd;
-        return realpath($dp);
+        if($bd!=null) {
+            $dp = $bd[0] == "." ? dirname(__FILE__) . "/" . $bd : $bd;
+            return realpath($dp);
+        }
+        else
+        {
+            return "../..";
+        }
     }
 
     public static function getInstance()
@@ -170,46 +183,38 @@ class Magmi_Config extends DirbasedConfig
 
     public function isDefault()
     {
-        return !file_exists($this->_confname);
+        return $this->_default;
     }
 
     public function load($name = null)
     {
-        if($name==null)
-        {
-         $conf = (!$this->isDefault()) ? $this->_confname : $this->_confname . ".default";
+        if($name!=null) {
+            $this->inifile=$name;
         }
-        else 
+
+        if(file_exists($this->inifile))
         {
-            $conf=$name;
+                $conf=$this->inifile;
+                $this->_default=false;
+                parent::load($conf);
+                $this->_confname = basename($conf);
+                if($this->_confname!=$conf)
+                {
+                      $this->_basedir=dirname($conf);
+                }
+
         }
-        parent::load($conf);
-        $this->_confname = basename($conf);
-        if($this->_confname!=$conf)
+        else
         {
-             $this->_basedir=dirname($conf);
+             $this->_default=true;
         }
-        if ($this->hasSection('USE_ALTERNATE'))
-        {
-            $alternate=$this->get("USE_ALTERNATE", "file");
-            $this->_confname = basename($alternate);
-            $this->_basedir=dirname($alternate);
-            $alt = true;
-            $this->set("USE_ALTERNATE", "file", $this->_confname);
-            parent::load($this->_confname);
-        }
-        
-      
+
+
         return $this;
     }
 
     public function save($arr = null)
     {
-        if (isset($arr["USE_ALTERNATE:file"]))
-        {
-            $this->_confname = $arr["USE_ALTERNATE:file"];
-            unset($arr["USE_ALTERNATE:file"]);
-        }
         if ($arr !== null)
         {
             foreach ($arr as $k => $v)

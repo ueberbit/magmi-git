@@ -16,9 +16,9 @@ class Magmi_ProductImport_DataPump
     public function __construct()
     {
         $this->_engine = new Magmi_ProductImportEngine();
-        $this->_engine->setBuiltinPluginClasses("*datasources", 
+        $this->_engine->setBuiltinPluginClasses("*datasources",
             dirname(__FILE__) . DIRSEP . "magmi_datapumpdatasource.php::Magmi_DatapumpDS");
-        
+
         $this->_stats["tstart"] = microtime(true);
         // differential
         $this->_stats["tdiff"] = $this->_stats["tstart"];
@@ -65,15 +65,17 @@ class Magmi_ProductImport_DataPump
             // process columns
             $this->_engine->callPlugins("itemprocessors", "processColumnList", $this->_importcolumns);
             $this->_engine->initAttrInfos($this->_importcolumns);
+            //initializing attribute set infos
+            $this->_engine->initAttrSetInfos();
         }
-        $res = $this->_engine->processDataSourceLine($item, $this->_rstep, $this->_stats["tstart"], 
+        $res = $this->_engine->processDataSourceLine($item, $this->_rstep, $this->_stats["tstart"],
             $this->_stats["tdiff"], $this->_stats["lastdbtime"], $this->stats["lastrec"]);
         return $res;
     }
 
     public function endImportSession()
     {
-        $this->_engine->reportStats($this->_engine->getCurrentRow(), $this->_stats["tstart"], $this->_stats["tdiff"], 
+        $this->_engine->reportStats($this->_engine->getCurrentRow(), $this->_stats["tstart"], $this->_stats["tdiff"],
             $this->_stats["lastdbtime"], $this->stats["lastrec"]);
         $skustats = $this->_engine->getSkuStats();
         $this->_engine->log("Skus imported OK:" . $skustats["ok"] . "/" . $skustats["nsku"], "info");
@@ -81,7 +83,7 @@ class Magmi_ProductImport_DataPump
         {
             $this->_engine->log("Skus imported KO:" . $skustats["ko"] . "/" . $skustats["nsku"], "warning");
         }
-        
+
         $this->_engine->exitImport();
     }
 }

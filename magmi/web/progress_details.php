@@ -7,15 +7,15 @@ session_write_close();
 <script type="text/javascript">
  showtrace=function(traceid)
  {
-	 
+
 	 if($('trace_'+traceid).visible())
 	 {
 		 $('trace_'+traceid).update('');
 		 $('trace_'+traceid).hide();
 	}
 	else
-	{ 
-		 new Ajax.Updater('trace_'+traceid,'trace_details.php',{parameters:{'traceid':traceid},onComplete:function(){$('trace_'+traceid).show()}});
+	{
+		 new Ajax.Updater('trace_'+traceid,'trace_details.php',{parameters:{'traceid':traceid,token:'<?php echo $_SESSION['token']?>'},onComplete:function(){$('trace_'+traceid).show()}});
  	}
  }
 </script>
@@ -38,7 +38,7 @@ foreach ($data as $line)
     ?>
  <li>
  <?php
-    
+
     if ($errnum != null)
     {
         ?>

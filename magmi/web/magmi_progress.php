@@ -15,7 +15,7 @@ if (file_exists($logfile))
     $parser = new DefaultProgressParser();
     $parser->setFile($logfile);
     $parser->parse();
-    
+
     $count = $parser->getData("itime:count");
     if ($count)
     {
@@ -53,13 +53,13 @@ else
 		else
 		{
 			new Ajax.Updater(detdiv,'progress_details.php',
-					{parameters:{'key':dtype,'PHPSESSID':'<?php echo session_id()?>'},
+					{parameters:{'key':dtype,'PHPSESSID':'<?php echo session_id()?>',token:'<?php echo $_SESSION['token']?>'},
 					 onComplete:function(f){var sb = new ScrollBox($(detdiv),{auto_hide:true});
 						$(detdiv).addClassName("loaded");
 						$(dtype+'_link').update("Hide Details");
 						$(detdiv).show();
 						},evalScripts:true});
-	
+
 		}
 	};
 </script>
@@ -73,7 +73,7 @@ else
 
 <div class="col">
 	<h3>Startup</h3>
-		
+
 <?php foreach($parser->getData("startup") as $sinfo):?>
 <div class="log_standard"><?php echo $sinfo?></div>
 <?php endforeach?>
@@ -152,7 +152,9 @@ foreach (array("error","warning") as $gtype)
 <?php }?>
 <?php endforeach?>
 
-<?php if(count($parser->getData("info")>0)):?>
+<?php
+$info=$parser->getData("info");
+if(count($info)>0):?>
 <div class="col">
 	<h3>Runtime infos</h3>
 	<div class="runtime_info">
@@ -162,8 +164,8 @@ foreach (array("error","warning") as $gtype)
 	</div>
 </div>
 <?php endif?>
-	
-	
+
+
 <?php
 $skipped = $parser->getData("skipped");
 if (!is_array($skipped) && $skipped > 0)
@@ -178,7 +180,7 @@ if (!is_array($skipped) && $skipped > 0)
 	<span><a href='magmi.php'>Back to Configuration Page</a></span>
 </div>
 <script type="text/javascript">endImport();</script>
-<?php else:?>	
+<?php else:?>
 	<?php if($parser->getData("ended")):?>
 <div
 	class='log_end <?php if(count($parser->getData("error"))>0){?> log_error<?php }?>'>

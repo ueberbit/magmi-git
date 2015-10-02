@@ -17,7 +17,7 @@ if (count($sqlfiles) > 0)
     }
     ?>
 <select name="UTCSQL:queryfile" id="UTCSQL:queryfile">
-	<?php foreach($sqlfiles as $curfile):?>	
+	<?php foreach($sqlfiles as $curfile):?>
 	<option <?php if($curfile==$dr){?> selected=selected <?php }?>
 				value="<?php echo $curfile?>"><?php echo $this->getRequestInfo($curfile)?></option>
 	<?php endforeach?>
@@ -43,6 +43,7 @@ ft.observe('change',function(ev)
 			new Ajax.Updater('fileoptions','ajax_pluginconf.php',{
 				parameters:{file:'filevalues.php',
 							plugintype:'utilities',
+                            token:'<?php echo $_SESSION['token']?>',
 						    pluginclass:'<?php echo get_class($this->_plugin)?>',
 						    profile:'<?php echo $this->getConfig()->getProfile()?>',
 						    'UTCSQL:queryfile':$F('UTCSQL:queryfile')
